@@ -25,7 +25,9 @@
 				<div class="live-badge">
 					<span class="pulse"></span>
 					{#await visitors then v}
-						{v.count} visitors
+						{#if v}
+							{v.count} visitors
+						{/if}
 					{/await}
 				</div>
 			</div>
@@ -181,13 +183,15 @@
 
 			<div class="card live-card">
 				{#await visitors then v}
-					<div class="live-number">{v.count}</div>
-					<div class="live-label">active visitors right now</div>
-					<div class="live-meta">
-						Last update: {new Date(v.updatedAt).toLocaleTimeString()}
-						<span class="dot" class:connected={visitors.connected}></span>
-						{visitors.connected ? 'Streaming' : 'Disconnected'}
-					</div>
+					{#if v}
+						<div class="live-number">{v.count}</div>
+						<div class="live-label">active visitors right now</div>
+						<div class="live-meta">
+							Last update: {new Date(v.updatedAt).toLocaleTimeString()}
+							<span class="dot" class:connected={visitors.connected}></span>
+							{visitors.connected ? 'Streaming' : 'Disconnected'}
+						</div>
+					{/if}
 				{/await}
 			</div>
 			<button class="btn" onclick={() => visitors.reconnect()}>⟳ Reconnect Stream</button>

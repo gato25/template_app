@@ -24,11 +24,7 @@
 				<h1>Remote Functions</h1>
 				<div class="live-badge">
 					<span class="pulse"></span>
-					{#await visitors then v}
-						{#if v}
-							{v.count} visitors
-						{/if}
-					{/await}
+					{(await visitors)?.count ?? '—'} visitors
 				</div>
 			</div>
 			<p>
@@ -61,16 +57,23 @@
 							<th>Status</th>
 						</tr>
 					</thead>
+					{#snippet ordersFailed(err: unknown)}
+						<tr>
+							<td colspan="5" class="error" style="text-align: center;">Failed to load orders: {err instanceof Error ? err.message : String(err)}</td>
+						</tr>
+					{/snippet}
 					<tbody>
-						{#each await getOrders() as order}
-							<tr>
-								<td class="mono">#{order.id}</td>
-								<td>{order.customer}</td>
-								<td>{order.item}</td>
-								<td class="mono">${order.total}</td>
-								<td><span class="status-pill {order.status}">{order.status}</span></td>
-							</tr>
-						{/each}
+						<svelte:boundary failed={ordersFailed}>
+							{#each await getOrders() as order (order.id.id)}
+								<tr>
+									<td class="mono">#{order.id.id}</td>
+									<td>{order.customer}</td>
+									<td>{order.item}</td>
+									<td class="mono">${order.total}</td>
+									<td><span class="status-pill {order.status}">{order.status}</span></td>
+								</tr>
+							{/each}
+						</svelte:boundary>
 					</tbody>
 				</table>
 			</div>
@@ -91,7 +94,7 @@
 			</p>
 
 			<div class="pill-picker">
-				{#each orderIds as id}
+				{#each orderIds as id (id)}
 					<button
 						class="pill"
 						class:active={selectedOrderId === id}
@@ -102,14 +105,16 @@
 				{/each}
 			</div>
 
+			{#snippet orderLookupFailed(err: unknown)}
+				<p class="error">{err instanceof Error ? err.message : String(err)}</p>
+			{/snippet}
 			<div class="card">
-				{#await getOrderById(selectedOrderId)}
-					<p class="muted">Loading order #{selectedOrderId}...</p>
-				{:then order}
+				<svelte:boundary failed={orderLookupFailed}>
+					{@const order = await getOrderById(selectedOrderId)}
 					<div class="detail-grid">
 						<div class="detail-item">
 							<span class="detail-label">Order ID</span>
-							<span class="detail-value mono">#{order.id}</span>
+							<span class="detail-value mono">#{order.id.id}</span>
 						</div>
 						<div class="detail-item">
 							<span class="detail-label">Customer</span>
@@ -128,9 +133,7 @@
 							<span class="detail-value"><span class="status-pill {order.status}">{order.status}</span></span>
 						</div>
 					</div>
-				{:catch err}
-					<p class="error">{err.message}</p>
-				{/await}
+				</svelte:boundary>
 			</div>
 		</section>
 
@@ -149,20 +152,17 @@
 			</p>
 
 			<div class="team-grid">
-				{#each [1, 2, 3, 4] as id}
-					{#await getTeamMember(id)}
-						<div class="team-card skeleton">Loading...</div>
-					{:then member}
-						{#if member}
-							<div class="team-card">
-								<div class="avatar">{member.avatar}</div>
-								<div>
-									<strong>{member.name}</strong>
-									<span class="role">{member.role}</span>
-								</div>
+				{#each [1, 2, 3, 4] as id (id)}
+					{@const member = await getTeamMember(id)}
+					{#if member}
+						<div class="team-card">
+							<div class="avatar">{member.avatar}</div>
+							<div>
+								<strong>{member.name}</strong>
+								<span class="role">{member.role}</span>
 							</div>
-						{/if}
-					{/await}
+						</div>
+					{/if}
 				{/each}
 			</div>
 		</section>
@@ -181,19 +181,18 @@
 				No polling, no manual refresh — data arrives automatically. Use <code>.connected</code> to check status.
 			</p>
 
-			<div class="card live-card">
-				{#await visitors then v}
-					{#if v}
-						<div class="live-number">{v.count}</div>
-						<div class="live-label">active visitors right now</div>
-						<div class="live-meta">
-							Last update: {new Date(v.updatedAt).toLocaleTimeString()}
-							<span class="dot" class:connected={visitors.connected}></span>
-							{visitors.connected ? 'Streaming' : 'Disconnected'}
-						</div>
-					{/if}
-				{/await}
-			</div>
+			<svelte:boundary>
+				{@const v = await visitors}
+				<div class="card live-card">
+					<div class="live-number">{v?.count ?? '—'}</div>
+					<div class="live-label">active visitors right now</div>
+					<div class="live-meta">
+						Last update: {v ? new Date(v.updatedAt).toLocaleTimeString() : '—'}
+						<span class="dot" class:connected={visitors.connected}></span>
+						{visitors.connected ? 'Streaming' : 'Disconnected'}
+					</div>
+				</div>
+			</svelte:boundary>
 			<button class="btn" onclick={() => visitors.reconnect()}>⟳ Reconnect Stream</button>
 		</section>
 
@@ -217,7 +216,7 @@
 					<div class="field">
 						<label for="t-subject">Subject</label>
 						<input id="t-subject" {...createTicket.fields.subject.as('text')} placeholder="e.g. Can't access billing page" />
-						{#each createTicket.fields.subject.issues() as issue}
+						{#each createTicket.fields.subject.issues() as issue (issue.message)}
 							<span class="field-error">{issue.message}</span>
 						{/each}
 					</div>
@@ -229,14 +228,14 @@
 							<option value="medium">🟡 Medium</option>
 							<option value="high">🔴 High</option>
 						</select>
-						{#each createTicket.fields.priority.issues() as issue}
+						{#each createTicket.fields.priority.issues() as issue (issue.message)}
 							<span class="field-error">{issue.message}</span>
 						{/each}
 					</div>
 					<div class="field">
 						<label for="t-desc">Description</label>
 						<textarea id="t-desc" {...createTicket.fields.description.as('text')} placeholder="Describe the issue..."></textarea>
-						{#each createTicket.fields.description.issues() as issue}
+						{#each createTicket.fields.description.issues() as issue (issue.message)}
 							<span class="field-error">{issue.message}</span>
 						{/each}
 					</div>
@@ -261,7 +260,7 @@
 
 			<div class="card">
 				<div class="cmd-buttons">
-					{#each orderIds as id}
+					{#each orderIds as id (id)}
 						<button
 							class="cmd-btn"
 							disabled={shippedLoading}

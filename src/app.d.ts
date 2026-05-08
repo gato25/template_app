@@ -8,8 +8,11 @@ declare global {
 		// interface PageState {}
 		interface Platform {
 			env: {
-				TURSO_URL: string;
-				TURSO_TOKEN: string;
+				SURREAL_URL: string;
+				SURREAL_USER: string;
+				SURREAL_PASS: string;
+				SURREAL_NS: string;
+				SURREAL_DB: string;
 			};
 		}
 	}

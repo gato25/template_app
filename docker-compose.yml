@@ -1,16 +1,39 @@
 version: '3.8'
 
 services:
+  surrealdb:
+    image: surrealdb/surrealdb:latest
+    user: root
+    command: start --user ${SURREAL_USER} --pass ${SURREAL_PASS} --bind 0.0.0.0:8000 rocksdb:///data/app.db
+    restart: always
+    volumes:
+      - ./data:/data
+    ports:
+      - "127.0.0.1:8000:8000"
+    networks:
+      - app-network
+    healthcheck:
+      test: ['CMD', '/surreal', 'is-ready']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   app:
     image: kami225/template-app:latest
     restart: always
     environment:
       - PORT=3000
       - HOST=0.0.0.0
-      - TURSO_URL=${TURSO_URL}
-      - TURSO_TOKEN=${TURSO_TOKEN}
+      - SURREAL_URL=ws://surrealdb:8000/rpc
+      - SURREAL_USER=${SURREAL_USER}
+      - SURREAL_PASS=${SURREAL_PASS}
+      - SURREAL_NS=${SURREAL_NS}
+      - SURREAL_DB=${SURREAL_DB}
     expose:
       - 3000
+    depends_on:
+      surrealdb:
+        condition: service_healthy
     networks:
       - app-network
 
@@ -18,9 +41,9 @@ services:
     image: caddy:2-alpine
     restart: always
     ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp" # Support HTTP/3 (QUIC)
+      - '80:80'
+      - '443:443'
+      - '443:443/udp' # Support HTTP/3 (QUIC)
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

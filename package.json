@@ -14,9 +14,7 @@
 		"format": "prettier --write .",
 		"start": "bun build/index.js",
 		"build:static": "BUILD_STATIC=true bun run build",
-		"db:push": "drizzle-kit push",
-		"db:seed": "bun run scripts/seed.ts",
-		"db:studio": "drizzle-kit studio"
+		"db:seed": "bun run scripts/seed.ts"
 	},
 	"devDependencies": {
 		"@capacitor/cli": "^8.3.1",
@@ -29,7 +27,6 @@
 		"@tailwindcss/vite": "^4.2.2",
 		"@types/node": "^24",
 		"dotenv": "^17.4.2",
-		"drizzle-kit": "^0.31.10",
 		"eslint": "^10.2.0",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.17.0",
@@ -50,8 +47,8 @@
 		"@capacitor/android": "^8.3.1",
 		"@capacitor/core": "^8.3.1",
 		"@capacitor/ios": "^8.3.1",
-		"@libsql/client": "^0.17.3",
-		"drizzle-orm": "^0.45.2",
+		"@surrealdb/node": "^3.0.3",
+		"surrealdb": "^2.0.3",
 		"valibot": "^1.4.0"
 	}
 }

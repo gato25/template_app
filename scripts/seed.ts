@@ -1,31 +1,52 @@
-import { createClient } from '@libsql/client';
-import { drizzle } from 'drizzle-orm/libsql';
-import { orders, teamMembers } from '../src/lib/server/schema';
+import { Surreal, createRemoteEngines } from 'surrealdb';
+import { createNodeEngines } from '@surrealdb/node';
+import { config } from 'dotenv';
 
-const client = createClient({
-	url: process.env.TURSO_URL!,
-	authToken: process.env.TURSO_TOKEN
+config({ path: '.env.local' });
+
+const url = process.env.SURREAL_URL ?? 'ws://127.0.0.1:8000/rpc';
+const user = process.env.SURREAL_USER ?? 'root';
+const pass = process.env.SURREAL_PASS ?? 'secret';
+const ns = process.env.SURREAL_NS ?? 'app';
+const db_name = process.env.SURREAL_DB ?? 'main';
+
+const db = new Surreal({
+	engines: {
+		...createRemoteEngines(),
+		...createNodeEngines()
+	}
 });
 
-const db = drizzle(client);
+await db.connect(url, {
+	namespace: ns,
+	database: db_name,
+	authentication: { username: user, password: pass }
+});
 
-await db.delete(teamMembers);
-await db.delete(orders);
+// ─── Clear existing data ───
+try { await db.query('DELETE orders'); } catch (_) {}
+try { await db.query('DELETE team_members'); } catch (_) {}
+try { await db.query('DELETE tickets'); } catch (_) {}
 
-await db.insert(teamMembers).values([
-	{ id: 1, name: 'Sarah Connor', role: 'Engineering Lead', avatar: 'SC' },
-	{ id: 2, name: 'John Reese', role: 'Product Designer', avatar: 'JR' },
-	{ id: 3, name: 'Root Groves', role: 'Backend Engineer', avatar: 'RG' },
-	{ id: 4, name: 'Shaw Finch', role: 'DevOps', avatar: 'SF' }
-]);
+// ─── Seed team members ───
+await db.query(`
+	INSERT INTO team_members (id, name, role, avatar) VALUES
+		(1, 'Sarah Connor', 'Engineering Lead', 'SC'),
+		(2, 'John Reese', 'Product Designer', 'JR'),
+		(3, 'Root Groves', 'Backend Engineer', 'RG'),
+		(4, 'Shaw Finch', 'DevOps', 'SF')
+`);
 
-await db.insert(orders).values([
-	{ id: 1001, customer: 'Alice Park', item: 'MacBook Pro 16"', total: 2499, status: 'delivered' },
-	{ id: 1002, customer: 'Bob Chen', item: 'AirPods Max', total: 549, status: 'shipped' },
-	{ id: 1003, customer: 'Carol Kim', item: 'iPad Air', total: 799, status: 'processing' },
-	{ id: 1004, customer: 'Dan Lee', item: 'Apple Watch Ultra', total: 799, status: 'processing' },
-	{ id: 1005, customer: 'Eve Zhang', item: 'Studio Display', total: 1599, status: 'delivered' }
-]);
+// ─── Seed orders ───
+await db.query(`
+	INSERT INTO orders (id, customer, item, total, status, created_at) VALUES
+		(1001, 'Alice Park', 'MacBook Pro 16"', 2499.00, 'delivered', time::now()),
+		(1002, 'Bob Chen', 'AirPods Max', 549.00, 'shipped', time::now()),
+		(1003, 'Carol Kim', 'iPad Air', 799.00, 'processing', time::now()),
+		(1004, 'Dan Lee', 'Apple Watch Ultra', 799.00, 'processing', time::now()),
+		(1005, 'Eve Zhang', 'Studio Display', 1599.00, 'delivered', time::now())
+`);
 
-console.log('✅ Seeded orders and team members');
+await db.close();
+console.log('✅ Seeded orders and team members into SurrealDB');
 process.exit(0);

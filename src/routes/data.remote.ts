@@ -1,48 +1,74 @@
-import { query, form, command } from '$app/server';
-import { getRequestEvent } from '$app/server';
-import { getDb } from '$lib/server/db';
-import { orders, teamMembers, tickets } from '$lib/server/schema';
-import { eq, desc, inArray } from 'drizzle-orm';
-import * as v from 'valibot';
-
+import { query, form, command, getRequestEvent } from '$app/server';
 import { env } from '$env/dynamic/private';
+import * as v from 'valibot';
+import { RecordId, Table, surql, type RecordResult } from 'surrealdb';
+import { getDb } from '$lib/server/db';
 
-function db() {
-	const { platform } = getRequestEvent();
-	const tursoUrl = platform?.env?.TURSO_URL || env.TURSO_URL;
-	const tursoToken = platform?.env?.TURSO_TOKEN || env.TURSO_TOKEN;
+type OrderStatus = 'delivered' | 'shipped' | 'processing';
 
-	if (!tursoUrl) {
-		throw new Error('TURSO_URL is not defined in platform.env or process.env');
-	}
+type Order = RecordResult<{
+	id: RecordId<'orders', number>;
+	customer: string;
+	item: string;
+	total: number;
+	status: OrderStatus;
+	created_at: Date;
+}>;
 
-	return getDb({ TURSO_URL: tursoUrl, TURSO_TOKEN: tursoToken || '' });
+type TeamMember = RecordResult<{
+	id: RecordId<'team_members', number>;
+	name: string;
+	role: string;
+	avatar: string;
+}>;
+
+type Ticket = {
+	subject: string;
+	priority: 'low' | 'medium' | 'high';
+	description: string;
+	created_at: Date;
+};
+
+async function db() {
+	getRequestEvent();
+	return getDb({
+		SURREAL_URL: env.SURREAL_URL,
+		SURREAL_USER: env.SURREAL_USER,
+		SURREAL_PASS: env.SURREAL_PASS,
+		SURREAL_NS: env.SURREAL_NS,
+		SURREAL_DB: env.SURREAL_DB
+	});
 }
 
 // ─── 1. query — Load all recent orders ───
 export const getOrders = query(async () => {
-	return db().select().from(orders).orderBy(desc(orders.createdAt)).limit(50);
+	const surreal = await db();
+	const [orders] = await surreal.query<[Order[]]>(
+		surql`SELECT * FROM orders ORDER BY created_at DESC LIMIT 50`
+	);
+	return orders ?? [];
 });
 
 // ─── 2. query(schema, fn) — Look up a single order ───
 export const getOrderById = query(v.number(), async (id) => {
-	const rows = await db().select().from(orders).where(eq(orders.id, id)).limit(1);
-	if (!rows[0]) throw new Error(`Order #${id} not found`);
-	return rows[0];
+	const surreal = await db();
+	const order = await surreal.select<Order>(new RecordId('orders', id));
+	if (!order) throw new Error(`Order #${id} not found`);
+	return order;
 });
 
 // ─── 3. query.batch — Load team member profiles ───
 export const getTeamMember = query.batch(v.number(), async (ids) => {
-	const rows = await db()
-		.select()
-		.from(teamMembers)
-		.where(inArray(teamMembers.id, ids));
-	const lookup = new Map(rows.map((m) => [m.id, m]));
+	const surreal = await db();
+	const [members] = await surreal.query<[TeamMember[]]>(
+		'SELECT * FROM team_members WHERE id IN $ids',
+		{ ids: ids.map((id) => new RecordId('team_members', id)) }
+	);
+	const lookup = new Map((members ?? []).map((m) => [m.id.id, m]));
 	return (id: number) => lookup.get(id) ?? null;
 });
 
 // ─── 4. query.live — Real-time visitor count ───
-// Simulated — real visitor tracking needs Durable Objects or KV
 let visitorCount = 142;
 export const getLiveVisitors = query.live(async function* () {
 	while (true) {
@@ -61,18 +87,23 @@ export const createTicket = form(
 		description: v.pipe(v.string(), v.nonEmpty('Description is required'))
 	}),
 	async ({ subject, priority, description }) => {
-		console.log('Inserting ticket:', { subject, priority, description });
-		const result = await db()
-			.insert(tickets)
-			.values({ subject, priority, description })
-			.returning({ ticketId: tickets.id });
-		console.log('Insert result:', result);
-		return { ticketId: result[0].ticketId };
+		const surreal = await db();
+		const created = await surreal.create<Ticket>(new Table('tickets')).content({
+			subject,
+			priority,
+			description,
+			created_at: new Date()
+		});
+		const ticket = created[0];
+		return { ticketId: ticket?.id.toString() ?? 'unknown' };
 	}
 );
 
 // ─── 6. command — Mark an order as shipped ───
 export const markAsShipped = command(v.number(), async (orderId) => {
-	await db().update(orders).set({ status: 'shipped' }).where(eq(orders.id, orderId));
-	return { orderId, newStatus: 'shipped' };
+	const surreal = await db();
+	await surreal
+		.update<Order>(new RecordId('orders', orderId))
+		.merge({ status: 'shipped' });
+	return { orderId, newStatus: 'shipped' as const };
 });

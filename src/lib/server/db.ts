@@ -1,28 +1,50 @@
-import { createClient, type Client } from '@libsql/client';
-import { drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql';
-import * as schema from './schema';
+import { Surreal, createRemoteEngines } from 'surrealdb';
+import { createNodeEngines } from '@surrealdb/node';
 
 export type DbEnv = {
-    TURSO_URL: string;
-    TURSO_TOKEN: string;
+	SURREAL_URL: string;
+	SURREAL_USER: string;
+	SURREAL_PASS: string;
+	SURREAL_NS: string;
+	SURREAL_DB: string;
 };
 
+let instance: Surreal | null = null;
 let lastUrl: string | null = null;
-let cachedDb: LibSQLDatabase<typeof schema> | null = null;
 
-export function getDb(env: DbEnv) {
-    if (cachedDb && lastUrl === env.TURSO_URL) {
-        return cachedDb;
-    }
+export async function getDb(env: DbEnv): Promise<Surreal> {
+	if (instance && lastUrl === env.SURREAL_URL) {
+		return instance;
+	}
 
-    const client = createClient({
-        url: env.TURSO_URL,
-        authToken: env.TURSO_TOKEN
-    });
+	if (instance) {
+		await instance.close();
+		instance = null;
+	}
 
-    lastUrl = env.TURSO_URL;
-    cachedDb = drizzle(client, { schema });
-    return cachedDb;
+	const db = new Surreal({
+		engines: {
+			...createRemoteEngines(),
+			...createNodeEngines()
+		},
+		codecOptions: {
+			useNativeDates: true
+		}
+	});
+
+	await db.connect(env.SURREAL_URL, {
+		namespace: env.SURREAL_NS,
+		database: env.SURREAL_DB,
+		authentication: {
+			username: env.SURREAL_USER,
+			password: env.SURREAL_PASS
+		},
+		reconnect: { enabled: true }
+	});
+
+	instance = db;
+	lastUrl = env.SURREAL_URL;
+	return instance;
 }
 
-export type Db = LibSQLDatabase<typeof schema>;
+export type Db = Surreal;

@@ -14,7 +14,9 @@
 		"format": "prettier --write .",
 		"start": "bun build/index.js",
 		"build:static": "BUILD_STATIC=true bun run build",
-		"db:seed": "bun run scripts/seed.ts"
+		"db:seed": "bun run scripts/seed.ts",
+		"docker:build": "docker build --platform linux/amd64 -t kami225/template-app:latest .",
+		"docker:push": "docker push kami225/template-app:latest"
 	},
 	"devDependencies": {
 		"@capacitor/cli": "^8.3.1",

@@ -5,8 +5,8 @@ export const fallback: RequestHandler = async ({ params, request, url, fetch }) 
 	headers.delete('origin'); // bypass SvelteKit's cross-site check
 	headers.delete('host'); // avoid host mismatch
 
-	// Use the explicit Cloudflare Worker URL for the target
-	const WORKER = 'https://template-app.oimod.workers.dev';
+	// Use the explicit VPS URL for the target
+	const WORKER = 'https://template.oimod.site';
 	const target = `${WORKER}/_app/remote/${params.path}${url.search}`;
 
 	const res = await fetch(target, {

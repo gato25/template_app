@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  app:
+    image: kami225/template-app:latest
+    restart: always
+    environment:
+      - PORT=3000
+      - HOST=0.0.0.0
+      - TURSO_URL=${TURSO_URL}
+      - TURSO_TOKEN=${TURSO_TOKEN}
+    expose:
+      - 3000
+    networks:
+      - app-network
+
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # Support HTTP/3 (QUIC)
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,5 +1,5 @@
 import { mdsvex } from 'mdsvex';
-import cloudflareAdapter from '@sveltejs/adapter-cloudflare';
+import svelteAdapterBun from 'svelte-adapter-bun';
 import staticAdapter from '@sveltejs/adapter-static';
 
 const isStatic = !!process.env.BUILD_STATIC;
@@ -18,7 +18,7 @@ const config = {
 			? staticAdapter({
 					fallback: 'index.html'
 				})
-			: cloudflareAdapter(),
+			: svelteAdapterBun(),
 		csrf: {
 			checkOrigin: false
 		},

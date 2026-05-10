@@ -4,4 +4,5 @@
     <string name="title_activity_main">template-app</string>
     <string name="package_name">com.example.app</string>
     <string name="custom_url_scheme">com.example.app</string>
+    <string name="server_client_id">495950306427-qsjgqljf7vovnm67g12l9hpvijqk50t0.apps.googleusercontent.com</string>
 </resources>

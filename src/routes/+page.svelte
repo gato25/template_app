@@ -7,6 +7,7 @@
 		createTicket,
 		markAsShipped
 	} from './data.remote';
+	import Auth from '$lib/components/Auth.svelte';
 
 	let selectedOrderId = $state(1001);
 	let shippedResult = $state('');
@@ -19,6 +20,10 @@
 
 <svelte:boundary>
 	<main>
+		<section style="margin-bottom: 2rem;">
+			<Auth />
+		</section>
+
 		<header>
 			<div class="header-top">
 				<h1>Remote Functions</h1>

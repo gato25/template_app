@@ -11,12 +11,13 @@
 			error = null;
 			
 			const result = await SocialLogin.login({
-				provider: 'google'
+				provider: 'google',
+				options: {}
 			});
 			
 			// Extract idToken and profile data
 			const idToken = result.result.idToken;
-			user = result.profile;
+			user = result.result.profile;
 			
 			console.log('Login Success!', { idToken, user });
 			// TODO: Send idToken to your server (e.g. data.remote.ts) to verify

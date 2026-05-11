@@ -47,6 +47,8 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>GIDClientID</key>
+	<string>495950306427-9gqt4vsfspc3di0mpqh27232ij20d0oo.apps.googleusercontent.com</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -54,7 +56,7 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>REVERSE_CLIENT_ID_HERE</string>
+				<string>com.googleusercontent.apps.495950306427-9gqt4vsfspc3di0mpqh27232ij20d0oo</string>
 			</array>
 		</dict>
 	</array>
